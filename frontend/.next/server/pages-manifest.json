@@ -3,6 +3,8 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
+  "/rules-game": "pages/rules-game.js",
   "/card/[cardName]": "pages/card/[cardName].js",
-  "/rules": "pages/rules.js"
+  "/deck-forum": "pages/deck-forum.js",
+  "/deck-building": "pages/deck-building.js"
 }

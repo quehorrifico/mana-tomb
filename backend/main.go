@@ -84,9 +84,10 @@ func randomCard(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT name, mana_cost, image_uris, type_line, oracle_text, set, set_name, set_uri, set_id, set_type, set_search_uri, scryfall_set_uri
 		FROM oracle_cards
-		ORDER BY random()
+		ORDER BY random(), (SELECT COUNT(*) FROM jsonb_object_keys(image_uris)) DESC
 		LIMIT 1;
 	`
+
 	var card handlers.OracleCard
 	var imageURIsJSON []byte
 
@@ -98,16 +99,23 @@ func randomCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert JSONB data from database into Go struct
+	// Random card found, return it
 	if err := json.Unmarshal(imageURIsJSON, &card.ImageURIs); err != nil {
 		http.Error(w, "Error decoding image URIs", http.StatusInternalServerError)
 		log.Println("❌ Error decoding image URIs:", err)
 		return
 	}
 
-	// Convert to JSON and return response
+	// Send the single exact match with a flag
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(card)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"exact_match": card,
+	})
+	return
+
+	// Convert to JSON and return response
+	// w.Header().Set("Content-Type", "application/json")
+	// json.NewEncoder(w).Encode(card)
 }
 
 // Get cards by fuzzy name search
@@ -118,20 +126,52 @@ func getCardByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract card name from URL
 	cardName := r.URL.Path[len("/card/"):]
 	if cardName == "" {
 		http.Error(w, "Card name is required", http.StatusBadRequest)
 		return
 	}
 
-	query := `
+	// Try finding an **exact match** first
+	queryExact := `
+		SELECT name, mana_cost, image_uris, type_line, oracle_text, set, set_name, set_uri, set_id, set_type, set_search_uri, scryfall_set_uri
+		FROM oracle_cards
+		WHERE name ILIKE $1
+		AND oracle_text IS NOT NULL AND oracle_text <> ''
+		ORDER BY (SELECT COUNT(*) FROM jsonb_object_keys(image_uris)) DESC
+		LIMIT 1;
+	`
+	var exactMatch handlers.OracleCard
+	var imageURIsJSON []byte
+	err := db.QueryRow(queryExact, cardName).Scan(
+		&exactMatch.Name, &exactMatch.ManaCost, &imageURIsJSON, &exactMatch.TypeLine, &exactMatch.OracleText,
+		&exactMatch.Set, &exactMatch.SetName, &exactMatch.SetURI, &exactMatch.SetID, &exactMatch.SetType,
+		&exactMatch.SetSearchURI, &exactMatch.ScryfallSetURI,
+	)
+	if err == nil {
+		// Exact match found, return it
+		if err := json.Unmarshal(imageURIsJSON, &exactMatch.ImageURIs); err != nil {
+			http.Error(w, "Error decoding image URIs", http.StatusInternalServerError)
+			log.Println("❌ Error decoding image URIs:", err)
+			return
+		}
+
+		// Send the single exact match with a flag
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"exact_match": exactMatch,
+		})
+		return
+	}
+
+	// If no exact match, return **fuzzy matches**
+	queryFuzzy := `
 		SELECT name, mana_cost, image_uris, type_line, oracle_text, set, set_name, set_uri, set_id, set_type, set_search_uri, scryfall_set_uri
 		FROM oracle_cards
 		WHERE name ILIKE '%' || $1 || '%'
 		LIMIT 10;
 	`
-	rows, err := db.Query(query, cardName)
+	rows, err := db.Query(queryFuzzy, cardName)
 	if err != nil {
 		http.Error(w, "Error fetching cards", http.StatusInternalServerError)
 		log.Println("❌ Error fetching cards:", err)
@@ -142,8 +182,6 @@ func getCardByName(w http.ResponseWriter, r *http.Request) {
 	var cards []handlers.OracleCard
 	for rows.Next() {
 		var card handlers.OracleCard
-		var imageURIsJSON []byte
-
 		err := rows.Scan(
 			&card.Name, &card.ManaCost, &imageURIsJSON, &card.TypeLine, &card.OracleText,
 			&card.Set, &card.SetName, &card.SetURI, &card.SetID, &card.SetType,
@@ -163,7 +201,7 @@ func getCardByName(w http.ResponseWriter, r *http.Request) {
 		cards = append(cards, card)
 	}
 
-	// If no results found
+	// If no fuzzy matches found
 	if len(cards) == 0 {
 		http.Error(w, "No cards found", http.StatusNotFound)
 		return
@@ -171,7 +209,9 @@ func getCardByName(w http.ResponseWriter, r *http.Request) {
 
 	// Convert to JSON and return response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(cards)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"fuzzy_matches": cards,
+	})
 }
 
 func enableCORS(w http.ResponseWriter) {
@@ -194,7 +234,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Mana Tomb API is running!"))
 	})
-	http.HandleFunc("/random-card", randomCard)
+	http.HandleFunc("/card/random", randomCard)
 	http.HandleFunc("/card/", getCardByName) // New card search endpoint
 
 	log.Println("🚀 Server is running on port 8080")

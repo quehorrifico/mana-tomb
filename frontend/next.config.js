@@ -5,10 +5,10 @@ const nextConfig = {
       return [
         {
           source: "/api/card/:cardName",
-          destination: "http://localhost:8080/card/:cardName", // Adjust this if your backend URL is different
+          destination: "http://localhost:8080/card/:cardName", // Ensure this matches backend routes
         },
       ];
     },
-  };
-  
-  module.exports = nextConfig;
+};
+
+module.exports = nextConfig;
