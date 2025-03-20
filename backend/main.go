@@ -111,11 +111,6 @@ func randomCard(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"exact_match": card,
 	})
-	return
-
-	// Convert to JSON and return response
-	// w.Header().Set("Content-Type", "application/json")
-	// json.NewEncoder(w).Encode(card)
 }
 
 // Get cards by fuzzy name search
