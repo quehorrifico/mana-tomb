@@ -110,7 +110,7 @@ func randomCard(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(card)
 }
 
-// Get card by name
+// Get cards by fuzzy name search
 func getCardByName(w http.ResponseWriter, r *http.Request) {
 	enableCORS(w)
 	if r.Method == "OPTIONS" {
@@ -128,36 +128,50 @@ func getCardByName(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT name, mana_cost, image_uris, type_line, oracle_text, set, set_name, set_uri, set_id, set_type, set_search_uri, scryfall_set_uri
 		FROM oracle_cards
-		WHERE LOWER(name) = LOWER($1)
-		LIMIT 1;
+		WHERE name ILIKE '%' || $1 || '%'
+		LIMIT 10;
 	`
-	var card handlers.OracleCard
-	var imageURIsJSON []byte
-
-	err := db.QueryRow(query, cardName).Scan(
-		&card.Name, &card.ManaCost, &imageURIsJSON, &card.TypeLine, &card.OracleText,
-		&card.Set, &card.SetName, &card.SetURI, &card.SetID, &card.SetType,
-		&card.SetSearchURI, &card.ScryfallSetURI,
-	)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Card not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		http.Error(w, "Error fetching card", http.StatusInternalServerError)
-		log.Println("❌ Error fetching card:", err)
+	rows, err := db.Query(query, cardName)
+	if err != nil {
+		http.Error(w, "Error fetching cards", http.StatusInternalServerError)
+		log.Println("❌ Error fetching cards:", err)
 		return
 	}
+	defer rows.Close()
 
-	// Convert JSONB data from database into Go struct
-	if err := json.Unmarshal(imageURIsJSON, &card.ImageURIs); err != nil {
-		http.Error(w, "Error decoding image URIs", http.StatusInternalServerError)
-		log.Println("❌ Error decoding image URIs:", err)
+	var cards []handlers.OracleCard
+	for rows.Next() {
+		var card handlers.OracleCard
+		var imageURIsJSON []byte
+
+		err := rows.Scan(
+			&card.Name, &card.ManaCost, &imageURIsJSON, &card.TypeLine, &card.OracleText,
+			&card.Set, &card.SetName, &card.SetURI, &card.SetID, &card.SetType,
+			&card.SetSearchURI, &card.ScryfallSetURI,
+		)
+		if err != nil {
+			log.Println("❌ Error scanning card:", err)
+			continue
+		}
+
+		// Convert JSONB data from database into Go struct
+		if err := json.Unmarshal(imageURIsJSON, &card.ImageURIs); err != nil {
+			log.Println("❌ Error decoding image URIs:", err)
+			continue
+		}
+
+		cards = append(cards, card)
+	}
+
+	// If no results found
+	if len(cards) == 0 {
+		http.Error(w, "No cards found", http.StatusNotFound)
 		return
 	}
 
 	// Convert to JSON and return response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(card)
+	json.NewEncoder(w).Encode(cards)
 }
 
 func enableCORS(w http.ResponseWriter) {
