@@ -23,7 +23,6 @@ func connectDB() {
 	// Connect to the default "postgres" database to check for "mana_tomb"
 	db, db_err = sql.Open("postgres", postgresDsn)
 	if db_err != nil {
-		// return nil, fmt.Errorf("error connecting to PostgreSQL: %w", err)
 		log.Fatal("❌ Error connecting to PostgreSQL:", db_err)
 	}
 	defer db.Close()
@@ -31,7 +30,6 @@ func connectDB() {
 	// Ensure the "mana_tomb" database exists
 	_, err := db.Exec("CREATE DATABASE mana_tomb;")
 	if err != nil && err.Error() != `pq: database "mana_tomb" already exists` {
-		// return nil, fmt.Errorf("error creating database: %w", err)
 		log.Fatal("❌ Error creating database:", err)
 	}
 
@@ -39,18 +37,15 @@ func connectDB() {
 	manaTombDsn := "postgres://postgres:password@localhost:5432/mana_tomb?sslmode=disable"
 	db, err = sql.Open("postgres", manaTombDsn)
 	if err != nil {
-		// return nil, fmt.Errorf("error connecting to mana_tomb: %w", err)
 		log.Fatal("❌ Error connecting to mana_tomb:", err)
 	}
 
 	// Verify the connection
 	if err := db.Ping(); err != nil {
-		// return nil, fmt.Errorf("error verifying database connection: %w", err)
 		log.Fatal("❌ Error verifying database connection:", err)
 	}
 
 	log.Println("✅ Connected to PostgreSQL database!")
-	// return db, nil
 }
 
 // Ensure required tables exist
@@ -87,24 +82,131 @@ func randomCard(w http.ResponseWriter, r *http.Request) {
 
 	// Use the existing db connection
 	query := `
-		SELECT name, mana_cost, oracle_text
+		SELECT name, mana_cost, image_uris, type_line, oracle_text, set, set_name, set_uri, set_id, set_type, set_search_uri, scryfall_set_uri
 		FROM oracle_cards
-		ORDER BY random()
+		ORDER BY random(), (SELECT COUNT(*) FROM jsonb_object_keys(image_uris)) DESC
 		LIMIT 1;
 	`
+
 	var card handlers.OracleCard
+	var imageURIsJSON []byte
 
 	// Fetch a random card
-	err := db.QueryRow(query).Scan(&card.Name, &card.ManaCost, &card.OracleText)
+	err := db.QueryRow(query).Scan(&card.Name, &card.ManaCost, &imageURIsJSON, &card.TypeLine, &card.OracleText, &card.Set, &card.SetName, &card.SetURI, &card.SetID, &card.SetType, &card.SetSearchURI, &card.ScryfallSetURI)
 	if err != nil {
 		http.Error(w, "Error fetching card", http.StatusInternalServerError)
 		log.Println("❌ Error fetching random card:", err)
 		return
 	}
 
+	// Random card found, return it
+	if err := json.Unmarshal(imageURIsJSON, &card.ImageURIs); err != nil {
+		http.Error(w, "Error decoding image URIs", http.StatusInternalServerError)
+		log.Println("❌ Error decoding image URIs:", err)
+		return
+	}
+
+	// Send the single exact match with a flag
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"exact_match": card,
+	})
+}
+
+// Get cards by fuzzy name search
+func getCardByName(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	cardName := r.URL.Path[len("/card/"):]
+	if cardName == "" {
+		http.Error(w, "Card name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Try finding an **exact match** first
+	queryExact := `
+		SELECT name, mana_cost, image_uris, type_line, oracle_text, set, set_name, set_uri, set_id, set_type, set_search_uri, scryfall_set_uri
+		FROM oracle_cards
+		WHERE name ILIKE $1
+		AND oracle_text IS NOT NULL AND oracle_text <> ''
+		ORDER BY (SELECT COUNT(*) FROM jsonb_object_keys(image_uris)) DESC
+		LIMIT 1;
+	`
+	var exactMatch handlers.OracleCard
+	var imageURIsJSON []byte
+	err := db.QueryRow(queryExact, cardName).Scan(
+		&exactMatch.Name, &exactMatch.ManaCost, &imageURIsJSON, &exactMatch.TypeLine, &exactMatch.OracleText,
+		&exactMatch.Set, &exactMatch.SetName, &exactMatch.SetURI, &exactMatch.SetID, &exactMatch.SetType,
+		&exactMatch.SetSearchURI, &exactMatch.ScryfallSetURI,
+	)
+	if err == nil {
+		// Exact match found, return it
+		if err := json.Unmarshal(imageURIsJSON, &exactMatch.ImageURIs); err != nil {
+			http.Error(w, "Error decoding image URIs", http.StatusInternalServerError)
+			log.Println("❌ Error decoding image URIs:", err)
+			return
+		}
+
+		// Send the single exact match with a flag
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"exact_match": exactMatch,
+		})
+		return
+	}
+
+	// If no exact match, return **fuzzy matches**
+	queryFuzzy := `
+		SELECT name, mana_cost, image_uris, type_line, oracle_text, set, set_name, set_uri, set_id, set_type, set_search_uri, scryfall_set_uri
+		FROM oracle_cards
+		WHERE name ILIKE '%' || $1 || '%'
+		LIMIT 10;
+	`
+	rows, err := db.Query(queryFuzzy, cardName)
+	if err != nil {
+		http.Error(w, "Error fetching cards", http.StatusInternalServerError)
+		log.Println("❌ Error fetching cards:", err)
+		return
+	}
+	defer rows.Close()
+
+	var cards []handlers.OracleCard
+	for rows.Next() {
+		var card handlers.OracleCard
+		err := rows.Scan(
+			&card.Name, &card.ManaCost, &imageURIsJSON, &card.TypeLine, &card.OracleText,
+			&card.Set, &card.SetName, &card.SetURI, &card.SetID, &card.SetType,
+			&card.SetSearchURI, &card.ScryfallSetURI,
+		)
+		if err != nil {
+			log.Println("❌ Error scanning card:", err)
+			continue
+		}
+
+		// Convert JSONB data from database into Go struct
+		if err := json.Unmarshal(imageURIsJSON, &card.ImageURIs); err != nil {
+			log.Println("❌ Error decoding image URIs:", err)
+			continue
+		}
+
+		cards = append(cards, card)
+	}
+
+	// If no fuzzy matches found
+	if len(cards) == 0 {
+		http.Error(w, "No cards found", http.StatusNotFound)
+		return
+	}
+
 	// Convert to JSON and return response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(card)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"fuzzy_matches": cards,
+	})
 }
 
 func enableCORS(w http.ResponseWriter) {
@@ -115,11 +217,6 @@ func enableCORS(w http.ResponseWriter) {
 
 func main() {
 	// Connect to the database
-	// db, err := connectDB()
-	// if err != nil {
-	// 	log.Fatalf("❌ Database connection failed: %v", err)
-	// }
-	// defer db.Close()
 	connectDB()
 
 	// Ensure tables exist
@@ -128,11 +225,12 @@ func main() {
 	// Start the bulk data fetch scheduler
 	utils.StartScheduler(db)
 
-	// API endpoint
+	// API endpoints
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Mana Tomb API is running!"))
 	})
-	http.HandleFunc("/random-card", randomCard)
+	http.HandleFunc("/card/random", randomCard)
+	http.HandleFunc("/card/", getCardByName) // New card search endpoint
 
 	log.Println("🚀 Server is running on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
