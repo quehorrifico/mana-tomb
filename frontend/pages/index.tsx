@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function Home() {
   const router = useRouter();
@@ -44,6 +45,7 @@ export default function Home() {
   return (
     <div>
       <h1>Mana Tomb</h1>
+      <Link href="/register">Register</Link> | <Link href="/login">Login</Link>
       <form onSubmit={handleSearch}>
         <input
           type="text"

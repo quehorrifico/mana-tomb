@@ -79,6 +79,7 @@ import (
 	"log"
 
 	_ "github.com/lib/pq"
+	"github.com/quehorrifico/mana-tomb/account"
 )
 
 // DB is the final, persistent connection to mana_tomb
@@ -137,6 +138,11 @@ func EnsureTables() {
 		log.Fatalf("❌ Error creating bulk_data table: %v", err)
 	} else {
 		log.Println("✅ bulk_data table checked/created successfully!")
+	}
+
+	// 3. Initialize account table + link DB to account package
+	if err := account.InitUserTable(DB); err != nil {
+		log.Fatalf("❌ Error ensuring users table: %v", err)
 	}
 
 	// Add any other tables (e.g., orchard_cards, oracle_cards, etc.)

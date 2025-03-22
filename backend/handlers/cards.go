@@ -5,19 +5,15 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/quehorrifico/mana-tomb/utils"
 )
 
 var DB *sql.DB
 
-func enableCORS(w http.ResponseWriter) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-}
-
 // Get a random card from the database
 func GetRandomCard(w http.ResponseWriter, r *http.Request) {
-	enableCORS(w) // Add CORS headers
+	utils.EnableCORS(w) // Add CORS headers
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -58,7 +54,7 @@ func GetRandomCard(w http.ResponseWriter, r *http.Request) {
 
 // Get cards by fuzzy name search
 func GetCardByName(w http.ResponseWriter, r *http.Request) {
-	enableCORS(w)
+	utils.EnableCORS(w)
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return

@@ -4,43 +4,11 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/quehorrifico/mana-tomb/account"
 	"github.com/quehorrifico/mana-tomb/db"
 	"github.com/quehorrifico/mana-tomb/handlers"
 	"github.com/quehorrifico/mana-tomb/utils"
 )
-
-/*
-func main() {
-	// 1) Connect to DB
-	if err := db.Connect(); err != nil {
-		log.Fatalf("❌ Failed to connect to DB: %v", err)
-	}
-	defer db.GetDB().Close()
-
-	// 2) Ensure your tables
-	if err := db.EnsureTables(); err != nil {
-		log.Fatalf("❌ Failed to ensure tables: %v", err)
-	}
-
-	// 3) Link DB to your handlers
-	handlers.DB = db.GetDB()
-
-	// 4) Start the scheduler (for bulk data fetch etc.)
-	utils.StartScheduler(db.GetDB())
-
-	// 5) Basic endpoints
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Mana Tomb API is running!"))
-	})
-
-	// 6) Card endpoints from your /handlers/cards.go
-	http.HandleFunc("/card/random", handlers.GetRandomCard)
-	http.HandleFunc("/card/", handlers.GetCardByName)
-
-	log.Println("🚀 Server is running on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
-*/
 
 func main() {
 	// 1) Connect to and open the final DB
@@ -50,6 +18,7 @@ func main() {
 
 	// Link the DB to your handlers
 	handlers.DB = db.GetDB()
+	account.DB = db.GetDB()
 
 	// 2) Ensure tables exist
 	db.EnsureTables()
@@ -63,6 +32,10 @@ func main() {
 	})
 	http.HandleFunc("/card/random", handlers.GetRandomCard)
 	http.HandleFunc("/card/", handlers.GetCardByName)
+
+	// Register account routes
+	http.HandleFunc("/register", account.RegisterUser)
+	http.HandleFunc("/login", account.LoginUser)
 
 	// Additional routes for account, decks, etc. can go here
 

@@ -3,12 +3,22 @@ package account
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	"github.com/quehorrifico/mana-tomb/utils"
 )
 
 var DB *sql.DB
 
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
+	utils.EnableCORS(w)
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -30,6 +40,13 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
+	utils.EnableCORS(w) // Add CORS headers
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -44,8 +61,10 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("here 1")
 	user, err := AuthenticateUser(DB, creds.Email, creds.Password)
 	if err != nil {
+		fmt.Println("here 9")
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
