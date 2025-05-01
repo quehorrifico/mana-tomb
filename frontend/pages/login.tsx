@@ -1,63 +1,55 @@
+// pages/login.tsx
 import { useState } from "react";
+import { useRouter } from "next/router";
+import { useAuth } from "./authContext";
 
-export default function LoginPage() {
-  const [creds, setCreds] = useState({ email: "", password: "" });
-  const [message, setMessage] = useState("");
+export default function Login() {
+  const router = useRouter();
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage("");
-    setError("");
-
     try {
-      const res = await fetch("http://localhost:8080/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(creds),
-      });
-
-      if (res.ok) {
-        const user = await res.json();
-        setMessage(`Logged in! Hello, ${user.username}`);
-        // Save user info or token somewhere if you plan to maintain session
-      } else {
-        const text = await res.text();
-        setError(`Error: ${text}`);
-      }
-    } catch (err: any) {
-      setError(`Request failed: ${err.message}`);
+      await login({ email, password });
+      router.push("/");
+    } catch (err) {
+      console.log(err);
+      setError("Failed to login. Please check your credentials.");
     }
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "0 auto" }}>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh", flexDirection: "column" }}>
       <h1>Login</h1>
-      {message && <p style={{ color: "green" }}>{message}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <div style={{ color: "red" }}>{error}</div>}
       <form onSubmit={handleSubmit}>
-        <div>
+        <div style={{ marginBottom: "1rem" }}>
           <label>Email:</label>
-          <input
+          <input 
             type="email"
-            required
-            value={creds.email}
-            onChange={(e) => setCreds({ ...creds, email: e.target.value })}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required 
           />
         </div>
-
-        <div>
+        <div style={{ marginBottom: "1rem" }}>
           <label>Password:</label>
-          <input
+          <input 
             type="password"
-            required
-            value={creds.password}
-            onChange={(e) => setCreds({ ...creds, password: e.target.value })}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required 
           />
         </div>
-
         <button type="submit">Login</button>
       </form>
+      <button onClick={() => router.push("/")}>Back to Home</button>
+      <p>
+        Don&apos;t have an account? <a href="/register">Register</a>
+      </p>
     </div>
   );
 }

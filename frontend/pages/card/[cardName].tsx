@@ -14,7 +14,10 @@ export default function CardPage() {
     const fetchCard = async () => {
       try {
         const endpoint = cardName === "random" ? "/api/card/random" : `/api/card/${cardName}`;
-        const res = await fetch(endpoint);
+        const res = await fetch(endpoint, {
+          method: "GET",
+          credentials: "include",
+        });
         if (!res.ok) {
           throw new Error("Card not found");
         }

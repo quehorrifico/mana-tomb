@@ -10,10 +10,20 @@ import (
 	"github.com/quehorrifico/mana-tomb/utils"
 )
 
+func withCORS(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		utils.EnableCORS(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next(w, r)
+	}
+}
+
 func main() {
 	// 1) Connect to and open the final DB
 	db.Connect()
-	// Defer closing the final connection here, not inside Connect()
 	defer db.GetDB().Close()
 
 	// Link the DB to your handlers
@@ -26,19 +36,19 @@ func main() {
 	// 3) Start your daily data fetch scheduler
 	utils.StartScheduler(db.GetDB())
 
-	// 4) Setup routes
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// 4) Setup ServeMux and routes
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Mana Tomb API is running!"))
 	})
-	http.HandleFunc("/card/random", handlers.GetRandomCard)
-	http.HandleFunc("/card/", handlers.GetCardByName)
-
-	// Register account routes
-	http.HandleFunc("/register", account.RegisterUser)
-	http.HandleFunc("/login", account.LoginUser)
-
-	// Additional routes for account, decks, etc. can go here
+	mux.HandleFunc("/card/random", withCORS(handlers.GetRandomCard))
+	mux.HandleFunc("/card/", withCORS(handlers.GetCardByName))
+	mux.HandleFunc("/register", withCORS(account.RegisterUser))
+	mux.HandleFunc("/login", withCORS(account.LoginUser))
+	mux.HandleFunc("/logout", withCORS(account.LogoutUser))
+	mux.HandleFunc("/me", withCORS(account.GetCurrentUser))
 
 	log.Println("🚀 Server is running on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", mux))
 }

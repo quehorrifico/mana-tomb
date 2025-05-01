@@ -147,3 +147,9 @@ func GetCardByName(w http.ResponseWriter, r *http.Request) {
 		"fuzzy_matches": cards,
 	})
 }
+
+// RegisterCardRoutes registers card-related endpoints to the given ServeMux
+func RegisterCardRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/card/random", GetRandomCard)
+	mux.HandleFunc("/card/", GetCardByName)
+}

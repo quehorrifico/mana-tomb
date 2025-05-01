@@ -1,72 +1,76 @@
+// pages/register.tsx
 import { useState } from "react";
+import { useRouter } from "next/router";
 
-export default function RegisterPage() {
-  const [formData, setFormData] = useState({ username: "", email: "", password: "" });
-  const [message, setMessage] = useState("");
+export default function Register() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage("");
-    setError("");
-
     try {
-      const res = await fetch("http://localhost:8080/register", {
+      const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        credentials: "include",
+        body: JSON.stringify({ username, email, password }),
       });
-
+  
+      console.log("Response status:", res.status);
+  
       if (res.ok) {
-        const user = await res.json();
-        setMessage(`User registered successfully! ID: ${user.id}`);
+        router.push("/login");
       } else {
-        const text = await res.text();
-        setError(`Error: ${text}`);
+        const errorText = await res.text(); // for debugging
+        console.error("Backend error:", errorText);
+        setError("Registration failed.");
       }
-    } catch (err: any) {
+    } catch (err) {
+      setError("Registration error.");
       console.log(err);
-      setError(`Request failed: ${err.message}`);
     }
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "0 auto" }}>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh", flexDirection: "column" }}>
       <h1>Register</h1>
-      {message && <p style={{ color: "green" }}>{message}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
+      {error && <div style={{ color: "red" }}>{error}</div>}
+      <form onSubmit={handleRegister}>
+        <div style={{ marginBottom: "1rem" }}>
           <label>Username:</label>
-          <input
-            required
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+          <input 
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required 
           />
         </div>
-
-        <div>
+        <div style={{ marginBottom: "1rem" }}>
           <label>Email:</label>
-          <input
+          <input 
             type="email"
-            required
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required 
           />
         </div>
-
-        <div>
+        <div style={{ marginBottom: "1rem" }}>
           <label>Password:</label>
-          <input
+          <input 
             type="password"
-            required
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required 
           />
         </div>
-
         <button type="submit">Register</button>
       </form>
+      <button onClick={() => router.push("/")}>Back to Home</button>
+      <p>
+        Already have an account? <a href="/login">Login</a>
+      </p>
     </div>
   );
 }

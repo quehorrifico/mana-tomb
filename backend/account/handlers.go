@@ -3,17 +3,12 @@ package account
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
-
-	"github.com/quehorrifico/mana-tomb/utils"
 )
 
 var DB *sql.DB
 
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
-	utils.EnableCORS(w)
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -35,13 +30,21 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set cookie to establish a session
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    user.Email,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
-	utils.EnableCORS(w) // Add CORS headers
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -61,13 +64,81 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("here 1")
 	user, err := AuthenticateUser(DB, creds.Email, creds.Password)
 	if err != nil {
-		fmt.Println("here 9")
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
-	json.NewEncoder(w).Encode(user)
+	// Set cookie to establish a session
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    user.Email,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+func LogoutUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Clear the session cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+func GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	cookie, err := r.Cookie("session_token")
+	if err != nil || cookie.Value == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// In a real app, you'd use the token to look up a session and user
+	var user User
+	err = DB.QueryRow("SELECT email FROM users WHERE email = $1", cookie.Value).Scan(&user.Email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Error fetching user: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"email": user.Email})
 }

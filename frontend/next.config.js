@@ -5,7 +5,23 @@ const nextConfig = {
       return [
         {
           source: "/api/card/:cardName",
-          destination: "http://localhost:8080/card/:cardName", // Ensure this matches backend routes
+          destination: "http://localhost:8080/card/:cardName", // Updated to match backend route
+        },
+        {
+          source: "/api/me",
+          destination: "http://localhost:8080/me", // Updated to match backend route
+        },
+        {
+          source: "/api/login",
+          destination: "http://localhost:8080/login", // Updated to match backend route
+        },
+        {
+          source: "/api/logout",
+          destination: "http://localhost:8080/logout", // Updated to match backend route
+        },
+        {
+          source: "/api/register",
+          destination: "http://localhost:8080/register", // Updated to match backend route
         },
       ];
     },
