@@ -4,6 +4,7 @@
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
   "/card/[cardName]": "pages/card/[cardName].js",
-  "/deck-building": "pages/deck-building.js",
-  "/login": "pages/login.js"
+  "/login": "pages/login.js",
+  "/deck-forum": "pages/deck-forum.js",
+  "/search-results": "pages/search-results.js"
 }

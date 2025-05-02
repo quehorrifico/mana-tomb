@@ -13,7 +13,8 @@ export default function CardPage() {
 
     const fetchCard = async () => {
       try {
-        const endpoint = cardName === "random" ? "/api/card/random" : `/api/card/${cardName}`;
+        const safeCardName = encodeURIComponent(cardName as string);
+        const endpoint = cardName === "random" ? "/api/card/random" : `/api/card/${safeCardName}`;
         const res = await fetch(endpoint, {
           method: "GET",
           credentials: "include",

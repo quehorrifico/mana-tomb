@@ -30,15 +30,20 @@ globalThis.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/card/[cardName].js"
     ],
-    "/deck-building": [
+    "/deck-forum": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/deck-building.js"
+      "static/chunks/pages/deck-forum.js"
     ],
     "/login": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/login.js"
+    ],
+    "/search-results": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/search-results.js"
     ]
   },
   "ampFirstPages": []
