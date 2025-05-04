@@ -2,9 +2,9 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
   "/card/[cardName]": "pages/card/[cardName].js",
+  "/deck-building": "pages/deck-building.js",
+  "/create-deck": "pages/create-deck.js",
   "/login": "pages/login.js",
-  "/deck-forum": "pages/deck-forum.js",
-  "/search-results": "pages/search-results.js"
+  "/": "pages/index.js"
 }

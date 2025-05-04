@@ -2,8 +2,6 @@ package utils
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
 )
 
 // EnsureUserTable creates the users table if it doesn't exist.
@@ -17,11 +15,21 @@ func EnsureUserTable(db *sql.DB) error {
 	);
 	`
 	_, err := db.Exec(query)
-	if err != nil {
-		return fmt.Errorf("error creating users table: %w", err)
-	}
-	log.Println("✅ users table checked/created successfully!")
-	return nil
+	return err
+}
+
+// EnsureSessionsTable creates the sessions table if it doesn't exist.
+func EnsureSessionsTable(db *sql.DB) error {
+	query := `
+	CREATE TABLE IF NOT EXISTS sessions (
+		id SERIAL PRIMARY KEY,
+		user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		token TEXT UNIQUE NOT NULL,
+		expires_at TIMESTAMPTZ NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	);`
+	_, err := db.Exec(query)
+	return err
 }
 
 // EnsureBulkDataTable creates the bulk_data table if it doesn't exist.
@@ -48,13 +56,13 @@ func EnsureOracleCardsTable(db *sql.DB) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS oracle_cards (
 		id UUID PRIMARY KEY,
-		name TEXT,
+		name TEXT NOT NULL,
 		mana_cost TEXT,
-		type_line TEXT,
+		type_line TEXT NOT NULL,
 		oracle_text TEXT,
-		image_uris JSONB,
-		set TEXT,
-		set_name TEXT
+		image_uris JSONB NOT NULL,
+		set TEXT NOT NULL,
+		set_name TEXT NOT NULL
 	);`
 	_, err := db.Exec(query)
 	return err
@@ -69,6 +77,21 @@ func EnsureUniqueArtworkTable(db *sql.DB) error {
 		image_uris JSONB,
 		set TEXT,
 		set_name TEXT
+	);`
+	_, err := db.Exec(query)
+	return err
+}
+
+// EnsureDecksTable creates the commander_decks table if it doesn't exist.
+func EnsureCommanderDecksTable(db *sql.DB) error {
+	query := `
+	CREATE TABLE IF NOT EXISTS proto_commander_decks (
+		id SERIAL PRIMARY KEY,
+		user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		name TEXT NOT NULL,
+    	description TEXT,
+		commander TEXT NOT NULL,
+		cards TEXT[]
 	);`
 	_, err := db.Exec(query)
 	return err

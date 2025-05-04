@@ -1,8 +1,9 @@
 package models
 
-type Deck struct {
-	ID        int    `json:"id"`
-	UserID    int    `json:"user_id"`
-	Name      string `json:"name"`
-	CreatedAt string `json:"created_at"`
+type ProtoCommanderDeck struct {
+	UserID      int      `json:"user_id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Commander   string   `json:"commander"`
+	Cards       []string `json:"cards"`
 }

@@ -16,6 +16,7 @@ import (
 
 // FetchAndParseBulkData fetches bulk data from Scryfall and stores it in PostgreSQL (oracle_cards, unique_artwork, etc.)
 func FetchAndParseBulkData(db *sql.DB) {
+	log.Println("🔄 Fetching and storing bulk data items from Scryfall...")
 	resp, err := http.Get("https://api.scryfall.com/bulk-data")
 	if err != nil {
 		log.Printf("Error fetching bulk data: %v\n", err)
@@ -87,7 +88,7 @@ func FetchAndParseBulkData(db *sql.DB) {
 
 // FetchAndParseOracleCards fetches JSON from the download_uri and stores it in new tables
 func FetchAndParseOracleCards(db *sql.DB) {
-	log.Println("🔄 Fetching JSON from stored bulk data download URIs...")
+	log.Println("📥 Parsing oracle cards from bulk data...")
 
 	// Query database for all bulk data items with type "oracle_cards"
 	rows, err := db.Query("SELECT type, name, download_uri FROM bulk_data WHERE type = 'oracle_cards'")
@@ -148,7 +149,7 @@ func FetchAndParseOracleCards(db *sql.DB) {
 
 // ParseAndParseUniqueArtwork fetches JSON from the download_uri and stores it in new tables
 func ParseAndParseUniqueArtwork(db *sql.DB) {
-	log.Println("🔄 Fetching JSON from stored bulk data download URIs...")
+	log.Println("📥 Parsing unique artwork from bulk data...")
 
 	// Query database for all bulk data items with type "oracle_cards"
 	rows, err := db.Query("SELECT type, name, download_uri FROM bulk_data WHERE type = 'oracle_cards'")

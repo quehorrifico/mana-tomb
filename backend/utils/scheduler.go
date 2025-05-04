@@ -13,12 +13,14 @@ func StartScheduler(db *sql.DB) {
 	SetupDatabase()
 	go func() {
 		for {
-			log.Println("🔄 Fetching and storing bulk data from Scryfall...")
-			log.Println("🛑 Fetching and storing process blocked, using existing data")
-			// FetchAndParseBulkData(db)
-			// FetchAndParseOracleCards(db)
-			// ParseAndParseUniqueArtwork(db)
-
+			doFetch := false
+			if !doFetch {
+				log.Println("🛑 Fetching and storing process blocked, using existing data")
+			} else {
+				FetchAndParseBulkData(db)
+				FetchAndParseOracleCards(db)
+				ParseAndParseUniqueArtwork(db)
+			}
 			log.Println("⏳ Next bulk data update in 24 hours...")
 			time.Sleep(24 * time.Hour) // Runs once every 24 hours
 		}
@@ -33,6 +35,9 @@ func SetupDatabase() {
 	if err := EnsureUserTable(db); err != nil {
 		log.Fatalf("❌ Failed to create users table: %v", err)
 	}
+	if err := EnsureSessionsTable(db); err != nil {
+		log.Fatalf("❌ Failed to create sessions table: %v", err)
+	}
 
 	// Setup card-related tables
 	if err := EnsureBulkDataTable(db); err != nil {
@@ -43,6 +48,9 @@ func SetupDatabase() {
 	}
 	if err := EnsureUniqueArtworkTable(db); err != nil {
 		log.Fatalf("❌ Failed to create unique_artwork table: %v", err)
+	}
+	if err := EnsureCommanderDecksTable(db); err != nil {
+		log.Fatalf("❌ Failed to create proto_commander_decks table: %v", err)
 	}
 
 	log.Println("✅ All database tables initialized successfully")

@@ -23,6 +23,14 @@ const nextConfig = {
           source: "/api/register",
           destination: "http://localhost:8080/register", // Updated to match backend route
         },
+        {
+          source: "/api/decks",
+          destination: "http://localhost:8080/decks", // Updated to match backend route
+        },
+        {
+          source: "/api/decks/create",
+          destination: "http://localhost:8080/decks/create", // Updated to match backend route
+        },
       ];
     },
 };

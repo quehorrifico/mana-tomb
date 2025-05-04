@@ -1,13 +1,84 @@
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { useAuth } from "./authContext";
 
-export default function PlaceholderPage() {
+interface Deck {
+  user_id: number;
+  name: string;
+  description: string;
+  created_at: string;
+  commander_id: string | null;
+}
+
+export default function DeckBuildingPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [decks, setDecks] = useState<Deck[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    const fetchDecks = async () => {
+      try {
+        const res = await fetch("/api/decks", {
+          method: "GET",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to fetch decks");
+        const data = await res.json();
+        setDecks(data);
+      } catch (err: any) {
+        setError(err.message || "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDecks();
+  }, []);
+
+  const handleCreateDeck = () => {
+    router.push("/create-deck");
+  };
+
+  const handleHome = () => {
+    router.push("/");
+  };
+
+  if (authLoading || !user) {
+    return <p>Loading...</p>;
+  }
 
   return (
-    <div style={{ textAlign: "center", padding: "50px" }}>
-      <h1>🚧 This Feature is Under Construction 🚧</h1>
-      <p>I'm still working on this feature! Check back soon for updates. 😊</p>
-      <button onClick={() => router.push("/")}>Back to Home</button>
+    <div style={{ padding: "2rem" }}>
+      <h1>Your Commander Decks</h1>
+      <button onClick={handleCreateDeck}>Create New Deck</button>
+      <button onClick={handleHome} style={{ marginLeft: "10px" }}>
+        Back to Home
+      </button>
+
+      {loading && <p>Loading decks...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {Array.isArray(decks) && decks.length > 0 ? (
+      <ul>
+        {decks.map((deck) => (
+          <li key={deck.user_id}>
+            <h3>{deck.name}</h3>
+            <p>{deck.description}</p>
+            <small>Created at: {new Date(deck.created_at).toLocaleString()}</small>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      !loading && <p>No decks found.</p>
+    )}
     </div>
   );
 }
