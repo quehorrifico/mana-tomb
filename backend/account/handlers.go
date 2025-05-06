@@ -1,12 +1,23 @@
 package account
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 var DB *sql.DB
+
+func generateSessionToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
+}
 
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
@@ -30,10 +41,24 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set cookie to establish a session
+	if user.ID == 0 {
+		http.Error(w, "Failed to retrieve user ID after registration", http.StatusInternalServerError)
+		return
+	}
+
+	token := generateSessionToken()
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	createdAt := time.Now()
+	_, err := DB.Exec("INSERT INTO sessions (user_id, token, expires_at, created_at) VALUES ($1, $2, $3, $4)", user.ID, token, expiresAt, createdAt)
+	if err != nil {
+		fmt.Printf("Error creating session for user ID %d: %v\n", user.ID, err)
+		http.Error(w, "Failed to create session", http.StatusInternalServerError)
+		return
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
-		Value:    user.Email,
+		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
@@ -66,14 +91,23 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := AuthenticateUser(DB, creds.Email, creds.Password)
 	if err != nil {
+		fmt.Println("here 1")
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
-	// Set cookie to establish a session
+	token := generateSessionToken()
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	createdAt := time.Now()
+	_, err = DB.Exec("INSERT INTO sessions (user_id, token, expires_at, created_at) VALUES ($1, $2, $3, $4)", user.ID, token, expiresAt, createdAt)
+	if err != nil {
+		http.Error(w, "Failed to create session", http.StatusInternalServerError)
+		return
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
-		Value:    user.Email,
+		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
@@ -95,7 +129,11 @@ func LogoutUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Clear the session cookie
+	cookie, err := r.Cookie("session_token")
+	if err == nil && cookie.Value != "" {
+		_, _ = DB.Exec("DELETE FROM sessions WHERE token = $1", cookie.Value)
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    "",
@@ -109,7 +147,6 @@ func LogoutUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
-
 func GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -123,13 +160,17 @@ func GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 
 	cookie, err := r.Cookie("session_token")
 	if err != nil || cookie.Value == "" {
+		fmt.Println("here 2")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	// In a real app, you'd use the token to look up a session and user
 	var user User
-	err = DB.QueryRow("SELECT email FROM users WHERE email = $1", cookie.Value).Scan(&user.Email)
+	err = DB.QueryRow(`
+		SELECT u.id, u.email FROM users u
+		JOIN sessions s ON s.user_id = u.id
+		WHERE s.token = $1
+	`, cookie.Value).Scan(&user.ID, &user.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "User not found", http.StatusNotFound)
@@ -141,4 +182,34 @@ func GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"email": user.Email})
+}
+
+func CreateUser(db *sql.DB, user *User) error {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	query := `INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id`
+	return db.QueryRow(query, user.Username, user.Email, string(hashed)).Scan(&user.ID)
+}
+
+func GetUserByEmail(db *sql.DB, email string) (*User, error) {
+	u := &User{}
+	query := `SELECT id, username, email, password FROM users WHERE email = $1`
+	err := db.QueryRow(query, email).Scan(&u.ID, &u.Username, &u.Email, &u.Password)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func AuthenticateUser(db *sql.DB, email, password string) (*User, error) {
+	user, err := GetUserByEmail(db, email)
+	if err != nil {
+		return nil, err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+	return user, nil
 }

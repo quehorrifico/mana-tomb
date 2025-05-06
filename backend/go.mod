@@ -1,4 +1,4 @@
-module github.com/quehorrifico/mana-tomb
+module github.com/quehorrifico/mana-tomb/backend
 
 go 1.23.1
 

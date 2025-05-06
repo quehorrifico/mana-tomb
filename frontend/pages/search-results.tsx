@@ -41,6 +41,7 @@ export default function SearchResults() {
           ))}
         </ul>
       )}
+      <button onClick={() => router.push("/")}>Back to Home</button>
     </div>
   );
 }

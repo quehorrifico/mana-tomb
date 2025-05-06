@@ -13,7 +13,8 @@ export default function CardPage() {
 
     const fetchCard = async () => {
       try {
-        const endpoint = cardName === "random" ? "/api/card/random" : `/api/card/${cardName}`;
+        const safeCardName = encodeURIComponent(cardName as string);
+        const endpoint = cardName === "random" ? "/api/card/random" : `/api/card/${safeCardName}`;
         const res = await fetch(endpoint, {
           method: "GET",
           credentials: "include",
@@ -49,6 +50,7 @@ export default function CardPage() {
       <p><strong>Type:</strong> {card.type_line || "N/A"}</p>
       <p><strong>Oracle Text:</strong> {card.oracle_text || "N/A"}</p>
       {card.image_uris?.normal && <img src={card.image_uris.normal} alt={card.name} />}
+      <button onClick={() => router.back()}>Back to Results</button>
       <button onClick={() => router.push("/")}>Back to Home</button>
     </div>
   );

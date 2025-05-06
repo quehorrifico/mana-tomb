@@ -35,10 +35,15 @@ globalThis.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/deck-building.js"
     ],
-    "/login": [
+    "/deck-forum": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/login.js"
+      "static/chunks/pages/deck-forum.js"
+    ],
+    "/rules-game": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/rules-game.js"
     ]
   },
   "ampFirstPages": []
