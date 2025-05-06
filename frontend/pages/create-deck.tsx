@@ -39,7 +39,7 @@ export default function CreateDeck() {
   };
 
   const handleSaveDeck = async () => {
-    if (!user || !user.id) {
+    if (!user) {
       alert("You must be logged in to save a deck.");
       return;
     }

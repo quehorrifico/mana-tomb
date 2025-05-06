@@ -1,12 +1,19 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { useAuth } from "../authContext";
 
 export default function DeckDetailsPage() {
   const router = useRouter();
   const { deckID } = router.query;
+  const { user, loading: authLoading } = useAuth();
   const [deck, setDeck] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [authLoading, user]);
 
   useEffect(() => {
     if (!deckID) return;
@@ -27,16 +34,15 @@ export default function DeckDetailsPage() {
         setDeck(data);
       } catch (err: any) {
         setError(err.message);
-      } finally {
-        setLoading(false);
       }
     };
 
-    console.log("new Fetched deck:", deck); // Debugging line
     fetchDeck();
   }, [deckID]);
 
-  if (loading) return <p>Loading...</p>;
+  if (authLoading || !user) {
+    return <p>Loading...</p>;
+  }
   if (error) return <p>Error: {error}</p>;
   if (!deck) return <p>No card data found.</p>;
 
@@ -44,18 +50,19 @@ export default function DeckDetailsPage() {
     <div>
       <h1>{deck.name}</h1>
       <p><strong>Description:</strong> {deck.description || "N/A"}</p>
-      <p><strong>Commander:</strong> {deck.commander_id || "N/A"}</p>
+      <p><strong>Commander:</strong> {deck.commander || "N/A"}</p>
       <p><strong>Cards:</strong></p>
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {deck.cards.map((card: any) => (
-          <li key={card.id} style={{ marginBottom: "15px", cursor: "pointer" }} onClick={() => router.push(`/card/${encodeURIComponent(card.name)}`)}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              {card.image_uris?.small && <img src={card.image_uris.small} alt={card.name} width="50" />}
-              <span>{card.name}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {deck.cards.length === 0 ? (
+        <p>No cards found.</p>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {deck.cards.map((cardName: string, index: number) => (
+            <li key={`${cardName}-${index}`} style={{ marginBottom: "15px", cursor: "pointer" }} onClick={() => router.push(`/card/${encodeURIComponent(cardName)}`)}>
+              <span>{cardName}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <button onClick={() => router.push("/deck-building")}>Back to Deck Building</button>
       <button onClick={() => router.push("/")}>Back to Home</button>
     </div>

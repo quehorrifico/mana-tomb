@@ -10,6 +10,11 @@ globalThis.__BUILD_MANIFEST = {
   "rootMainFiles": [],
   "rootMainFilesTree": {},
   "pages": {
+    "/": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/index.js"
+    ],
     "/_app": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -20,15 +25,25 @@ globalThis.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
+    "/card/[cardName]": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/card/[cardName].js"
+    ],
     "/deck-building": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/deck-building.js"
     ],
-    "/decks/[deckID]": [
+    "/deck-forum": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/decks/[deckID].js"
+      "static/chunks/pages/deck-forum.js"
+    ],
+    "/rules-game": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/rules-game.js"
     ]
   },
   "ampFirstPages": []
