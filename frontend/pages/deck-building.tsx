@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useAuth } from "./authContext";
 
 interface Deck {
+  deck_id: number; // 👈 add this
   user_id: number;
   name: string;
   description: string;
@@ -32,6 +33,7 @@ export default function DeckBuildingPage() {
         });
         if (!res.ok) throw new Error("Failed to fetch decks");
         const data = await res.json();
+        console.log("Fetched decks:", data); // Debugging line
         setDecks(data);
       } catch (err: any) {
         setError(err.message || "An error occurred");
@@ -55,6 +57,24 @@ export default function DeckBuildingPage() {
     return <p>Loading...</p>;
   }
 
+  // const getDeckDetails = async (deck_id: number) => {
+  //   const encodedDeckId = encodeURIComponent(deck_id);
+  //   const res = await fetch(`/api/decks/${encodedDeckId}`, {
+  //     method: "GET",
+  //     credentials: "include",
+  //   });
+  //   const data = await res.json();
+  //   router.push({
+  //     pathname: "/decks/[deckName]",
+  //   })
+  // };
+  const getDeckDetails = (deckId: number) => {
+    // debug line
+    console.log("Deck ID to navigate:", deckId);
+    const encodedDeckId = encodeURIComponent(deckId.toString());
+    router.push(`/decks/${encodedDeckId}`);
+  }
+
   return (
     <div style={{ padding: "2rem" }}>
       <h1>Your Commander Decks</h1>
@@ -68,14 +88,19 @@ export default function DeckBuildingPage() {
 
       {Array.isArray(decks) && decks.length > 0 ? (
       <ul>
-        {decks.map((deck) => (
-          <li key={deck.user_id}>
-            <h3>{deck.name}</h3>
-            <p>{deck.description}</p>
-            <small>Created at: {new Date(deck.created_at).toLocaleString()}</small>
-          </li>
-        ))}
-      </ul>
+      {decks.map((deck) => (
+        <li
+          key={deck.deck_id}
+          style={{ marginBottom: "1rem", cursor: "pointer" }}
+          onClick={() => getDeckDetails(deck.deck_id)} // Navigate to deckName page
+        >
+          <h3>{deck.name}</h3>
+          <p>{deck.description}</p>
+          <p>Deck ID: {deck.deck_id}</p>
+          <small>Created at: {new Date(deck.created_at).toLocaleString()}</small>
+        </li>
+      ))}
+    </ul>
     ) : (
       !loading && <p>No decks found.</p>
     )}

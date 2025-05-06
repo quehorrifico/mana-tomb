@@ -31,6 +31,10 @@ const nextConfig = {
           source: "/api/decks/create",
           destination: "http://localhost:8080/decks/create", // Updated to match backend route
         },
+        {
+          source: "/api/decks/:deckID",
+          destination: "http://localhost:8080/decks/:deckID",
+        },
       ];
     },
 };

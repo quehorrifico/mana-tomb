@@ -2,9 +2,6 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/card/[cardName]": "pages/card/[cardName].js",
-  "/deck-building": "pages/deck-building.js",
-  "/create-deck": "pages/create-deck.js",
-  "/login": "pages/login.js",
-  "/": "pages/index.js"
+  "/decks/[deckID]": "pages/decks/[deckID].js",
+  "/deck-building": "pages/deck-building.js"
 }

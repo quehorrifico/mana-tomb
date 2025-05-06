@@ -39,6 +39,11 @@ export default function CreateDeck() {
   };
 
   const handleSaveDeck = async () => {
+    if (!user || !user.id) {
+      alert("You must be logged in to save a deck.");
+      return;
+    }
+  
     const res = await fetch("/api/decks/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -51,10 +56,18 @@ export default function CreateDeck() {
         user_id: user.id,
       }),
     });
-
-    if (res.ok) {
-      router.push("/deck-building");
-    } else {
+  
+    try {
+      const data = await res.json();
+  
+      if (res.ok && data.deck_id) {
+        router.push(`/decks/${data.deck_id}`);
+      } else {
+        console.error("Unexpected response:", data);
+        alert("Deck saved but no deck ID returned.");
+      }
+    } catch (err) {
+      console.error("Failed to parse response:", err);
       alert("Failed to save deck.");
     }
   };
