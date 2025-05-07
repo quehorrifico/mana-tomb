@@ -40,6 +40,35 @@ export default function DeckDetailsPage() {
     fetchDeck();
   }, [deckID]);
 
+  const handleEdit = () => {
+    if (deckID) {
+      router.push(`/decks/edit-deck/${deckID}`);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deckID) return;
+    const confirmed = window.confirm("Are you sure you want to delete this deck?");
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/decks/delete/${deckID}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete deck");
+      }
+
+      alert("Deck deleted successfully");
+      router.push("/deck-building");
+    } catch (err) {
+      console.error("Error deleting deck:", err);
+      alert("An error occurred while deleting the deck.");
+    }
+  };
+
   if (authLoading || !user) {
     return <p>Loading...</p>;
   }
@@ -65,6 +94,8 @@ export default function DeckDetailsPage() {
       )}
       <button onClick={() => router.push("/deck-building")}>Back to Deck Building</button>
       <button onClick={() => router.push("/")}>Back to Home</button>
+      <button onClick={handleEdit}>Edit Deck</button>
+      <button onClick={handleDelete}>Delete Deck</button>
     </div>
   );
 }

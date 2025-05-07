@@ -3,7 +3,6 @@ package decks
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/lib/pq"
@@ -32,7 +31,6 @@ func GetDecksByUser(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var commander_deck models.ProtoCommanderDeck
 		if err := rows.Scan(&commander_deck.DeckID, &commander_deck.UserID, &commander_deck.Name, &commander_deck.Description, &commander_deck.Commander, pq.Array(&commander_deck.Cards)); err != nil {
-			fmt.Printf("Error scanning commander deck: %v\n", err)
 			http.Error(w, "Error scanning commander deck", http.StatusInternalServerError)
 			return
 		}
@@ -118,6 +116,60 @@ func GetDeckByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("Deck ID: %d, User ID: %d, Name: %s, Description: %s, Commander: %s, Cards: %v\n", commander_deck.DeckID, commander_deck.UserID, commander_deck.Name, commander_deck.Description, commander_deck.Commander, commander_deck.Cards)
 	json.NewEncoder(w).Encode(commander_deck)
+}
+
+func UpdateDeck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	deckID := r.URL.Path[len("/decks/delete/"):]
+	if deckID == "" {
+		http.Error(w, "Invalid deck ID in path", http.StatusBadRequest)
+		return
+	}
+
+	var updatedDeck models.ProtoCommanderDeck
+	if err := json.NewDecoder(r.Body).Decode(&updatedDeck); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	query := `
+		UPDATE proto_commander_decks
+		SET name = $1, description = $2, commander = $3, cards = $4
+		WHERE id = $5
+	`
+	_, err := DB.Exec(query, updatedDeck.Name, updatedDeck.Description, updatedDeck.Commander, pq.Array(updatedDeck.Cards), deckID)
+	if err != nil {
+		http.Error(w, "Error updating deck", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Deck updated successfully"})
+}
+
+func DeleteDeck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	deckID := r.URL.Path[len("/decks/delete/"):]
+	if deckID == "" {
+		http.Error(w, "Invalid deck ID in path", http.StatusBadRequest)
+		return
+	}
+
+	_, err := DB.Exec("DELETE FROM proto_commander_decks WHERE id = $1", deckID)
+	if err != nil {
+		http.Error(w, "Error deleting deck", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Deck deleted successfully"})
 }

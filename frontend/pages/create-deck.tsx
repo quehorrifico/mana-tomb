@@ -122,7 +122,7 @@ export default function CreateDeck() {
       </ul>
 
       <button onClick={handleSaveDeck}>Save Deck</button>
-      <button onClick={() => router.push("/deck-builder")}>Back to Decks</button>
+      <button onClick={() => router.push("/deck-building")}>Back to Decks</button>
       <button onClick={() => router.push("/")}>Home</button>
     </div>
   );

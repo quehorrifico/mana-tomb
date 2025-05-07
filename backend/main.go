@@ -50,6 +50,8 @@ func registerRoutes(mux *http.ServeMux) {
 	mux.Handle("/decks", withCORS(middleware.AuthMiddleware(http.HandlerFunc(decks.GetDecksByUser))))
 	mux.Handle("/decks/create", withCORS(middleware.AuthMiddleware(http.HandlerFunc(decks.CreateDeck))))
 	mux.Handle("/decks/", withCORS(middleware.AuthMiddleware(http.HandlerFunc(decks.GetDeckByID))))
+	mux.Handle("/decks/update/", withCORS(middleware.AuthMiddleware(http.HandlerFunc(decks.UpdateDeck))))
+	mux.Handle("/decks/delete/", withCORS(middleware.AuthMiddleware(http.HandlerFunc(decks.DeleteDeck))))
 
 	// Auth endpoints (Public)
 	mux.Handle("/register", withCORS(http.HandlerFunc(account.RegisterUser)))
