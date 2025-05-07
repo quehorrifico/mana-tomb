@@ -51,7 +51,6 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	createdAt := time.Now()
 	_, err := DB.Exec("INSERT INTO sessions (user_id, token, expires_at, created_at) VALUES ($1, $2, $3, $4)", user.ID, token, expiresAt, createdAt)
 	if err != nil {
-		fmt.Printf("Error creating session for user ID %d: %v\n", user.ID, err)
 		http.Error(w, "Failed to create session", http.StatusInternalServerError)
 		return
 	}

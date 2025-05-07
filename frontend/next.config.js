@@ -35,6 +35,14 @@ const nextConfig = {
           source: "/api/decks/:deckID",
           destination: "http://localhost:8080/decks/:deckID",
         },
+        {
+          source: "/api/decks/delete/:deckID",
+          destination: "http://localhost:8080/decks/delete/:deckID",
+        },
+        {
+          source: "/api/decks/update/:deckID",
+          destination: "http://localhost:8080/decks/update/:deckID",
+        },
       ];
     },
 };
